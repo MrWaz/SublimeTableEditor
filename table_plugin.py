@@ -110,16 +110,51 @@ class AbstractTableCommand(sublime_plugin.TextCommand):
     def get_last_table_row(self, row):
         last_table_row = row
         last_line = self.get_last_buffer_row()
-        while (row <= last_line and self.is_table_row(row)):
-            last_table_row = row
-            row = row + 1
+
+        # while (row <= last_line and self.is_table_row(row)):
+        #     last_table_row = row
+        #     row = row + 1
+        # return last_table_row
+
+        while(True):
+            if self.is_table_row(row):
+                last_table_row = row
+                if row == last_line: # end case regular row
+                    break
+                else:
+                    row = row+1
+            elif row+1 == last_line:
+                break
+            elif self.is_table_row(row+1):
+                last_table_row = row+1
+                row = row+1
+            else:
+                break
         return last_table_row
+
 
     def get_first_table_row(self, row):
         first_table_row = row
-        while (row >= 0 and self.is_table_row(row)):
-            first_table_row = row
-            row = row - 1
+
+        # while (row >= 0 and self.is_table_row(row)):
+        #     first_table_row = row
+        #     row = row - 1
+        # return first_table_row
+
+        while(True):
+            if self.is_table_row(row):
+                first_table_row = row
+                if row == 0:
+                    break
+                else:
+                    row = row - 1
+            elif row-1 == 0:
+                break
+            elif self.is_table_row(row-1):
+                last_table_row = row-1
+                row = row-1
+            else:
+                break
         return first_table_row
 
     def duplicate_row_and_fill(self, edit, row, fill_char):
@@ -222,7 +257,7 @@ class TableEditorNextField(AbstractTableMultiSelect):
         field_count = self.get_field_count(sel_row)
         moved = False
         while True:
-            if self.is_separator_row(sel_row):
+            if self.is_separator_row(sel_row) or not sel_row:
                 if sel_row < last_table_row:
                     sel_row = sel_row + 1
                     field_num = 0

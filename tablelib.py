@@ -88,6 +88,7 @@ class TextTable:
     ROW_SEPARATOR = 's'
     ROW_HEADER = 'h'
     ROW_FORMAT = 'f'
+    EMPTY_ROW = 'e'
 
     def __init__(self, text):
         self.text = text
@@ -129,6 +130,11 @@ class TextTable:
         return True
 
     def _merge(self, new_row):
+        if not new_row:
+            self._row_types.append(TextTable.EMPTY_ROW)
+            self._rows.append("??")
+            return
+
         if self._is_row_separator(new_row):
             new_row = ['---' for col in new_row]
             self._row_types.append(TextTable.ROW_SEPARATOR)
@@ -155,6 +161,9 @@ class TextTable:
     def _split_line(self, line):
         line = line.strip()
 
+        if not line:
+            return
+
         #remove first '|' character
         assert line[0] == '|'
         line = line[1:]
@@ -167,7 +176,16 @@ class TextTable:
 
     def _adjust_column_count(self):
         column_count = len(self._col_lens)
-        for row in self._rows:
+        # for row in self._rows:
+        #     if not row:
+        #         continue
+        #     row.extend(['   '] * (column_count - len(row)))
+        row_count = len(self._rows)
+        for row_ind in range(row_count):
+            row_type = self._row_types[row_ind]
+            if row_type == TextTable.EMPTY_ROW:
+                continue
+            row = self._rows[row_ind]
             row.extend(['   '] * (column_count - len(row)))
 
     def _auto_detect_column(self, start_row_ind, col_ind):
@@ -179,6 +197,8 @@ class TextTable:
                 continue
             elif row_type == TextTable.ROW_HEADER:
                 continue
+            elif row_type == TextTable.EMPTY_ROW:
+                continue
             if len(row[col_ind].strip()) > 0 and not re.match("^\s*[0-9]*[.,]?[0-9]+\s*$", row[col_ind]):
                 return TextTable.ALIGN_LEFT
         return TextTable.ALIGN_RIGHT
@@ -189,37 +209,38 @@ class TextTable:
         row_count = len(self._rows)
         data_alignment = [None] * len(self._col_lens)
         for row_ind in range(row_count):
-            row = self._rows[row_ind]
             row_type = self._row_types[row_ind]
+            row = self._rows[row_ind]
             out_row = []
-            for col_ind in range(column_count):
-                col = row[col_ind]
-                col_len = self._col_lens[col_ind]
+            if row_type != TextTable.EMPTY_ROW:
+                for col_ind in range(column_count):
+                    col = row[col_ind]
+                    col_len = self._col_lens[col_ind]
 
-                if row_type == TextTable.ROW_SEPARATOR:
-                    col = '-' * col_len
-                elif row_type == TextTable.ROW_HEADER:
-                    col = col.center(col_len, ' ')
-                elif row_type == TextTable.ROW_FORMAT:
-                    if '<' in col:
-                        data_alignment[col_ind] = TextTable.ALIGN_LEFT
-                        col = ' ' + '<' * (col_len - 2) + ' '
-                    elif '>' in col:
-                        data_alignment[col_ind] = TextTable.ALIGN_RIGHT
-                        col = ' ' + '>' * (col_len - 2) + ' '
-                    elif '#' in col:
-                        data_alignment[col_ind] = TextTable.ALIGN_CENTER
-                        col = ' ' + '#' * (col_len - 2) + ' '
-                elif row_type == 'd':
-                    if (data_alignment[col_ind] is None):
-                        data_alignment[col_ind] = self._auto_detect_column(row_ind, col_ind)
-                    if data_alignment[col_ind] == TextTable.ALIGN_RIGHT:
-                        col = col.rjust(col_len, ' ')
-                    elif data_alignment[col_ind] == TextTable.ALIGN_LEFT:
-                        col = col.ljust(col_len, ' ')
-                    elif data_alignment[col_ind] == TextTable.ALIGN_CENTER:
+                    if row_type == TextTable.ROW_SEPARATOR:
+                        col = '-' * col_len
+                    elif row_type == TextTable.ROW_HEADER:
                         col = col.center(col_len, ' ')
-                out_row.append(col)
+                    elif row_type == TextTable.ROW_FORMAT:
+                        if '<' in col:
+                            data_alignment[col_ind] = TextTable.ALIGN_LEFT
+                            col = ' ' + '<' * (col_len - 2) + ' '
+                        elif '>' in col:
+                            data_alignment[col_ind] = TextTable.ALIGN_RIGHT
+                            col = ' ' + '>' * (col_len - 2) + ' '
+                        elif '#' in col:
+                            data_alignment[col_ind] = TextTable.ALIGN_CENTER
+                            col = ' ' + '#' * (col_len - 2) + ' '
+                    elif row_type == 'd':
+                        if (data_alignment[col_ind] is None):
+                            data_alignment[col_ind] = self._auto_detect_column(row_ind, col_ind)
+                        if data_alignment[col_ind] == TextTable.ALIGN_RIGHT:
+                            col = col.rjust(col_len, ' ')
+                        elif data_alignment[col_ind] == TextTable.ALIGN_LEFT:
+                            col = col.ljust(col_len, ' ')
+                        elif data_alignment[col_ind] == TextTable.ALIGN_CENTER:
+                            col = col.center(col_len, ' ')
+                    out_row.append(col)
             out.append(out_row)
         self._rows = out
 
@@ -232,7 +253,15 @@ class TextTable:
             self._merge(cols)
         self._adjust_column_count()
         self._adjust_column_width()
-        return [self._prefix + "|" + "|".join(row) + "|" for row in self._rows]
+        # return [self._prefix + "|" + "|".join(row) + "|" for row in self._rows]
+        out = []
+        for row in self._rows:
+            if not row:
+                out.append('')
+            else:
+                out.append(self._prefix + "|" + "|".join(row) + "|")
+        # print out
+        return out
 
     def format_to_text(self):
         return "\n".join(self.format_to_lines())
