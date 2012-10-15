@@ -69,6 +69,9 @@ class AbstractTableCommand(sublime_plugin.TextCommand):
     def get_row(self, point):
         return self.view.rowcol(point)[0]
 
+    def is_empty_row(self,row):
+        return not self.get_text(row)
+
     def is_separator_row(self, row):
         return re.match(r"^\s*\|([\-]+\|)+$",
                         self.get_text(row)) is not None
@@ -257,7 +260,7 @@ class TableEditorNextField(AbstractTableMultiSelect):
         field_count = self.get_field_count(sel_row)
         moved = False
         while True:
-            if self.is_separator_row(sel_row) or not sel_row:
+            if self.is_separator_row(sel_row) or self.is_empty_row(sel_row):
                 if sel_row < last_table_row:
                     sel_row = sel_row + 1
                     field_num = 0
@@ -302,7 +305,7 @@ class TableEditorPreviousField(AbstractTableMultiSelect):
         first_table_row = self.get_first_table_row(sel_row)
         moved = False
         while True:
-            if self.is_separator_row(sel_row):
+            if self.is_separator_row(sel_row) or self.is_empty_row(sel_row):
                 if sel_row > first_table_row:
                     sel_row = sel_row - 1
                     field_num = self.get_field_count(sel_row) - 1
